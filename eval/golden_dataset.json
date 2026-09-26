@@ -1,0 +1,12 @@
+[
+  {
+    "question": "Replace this with a real question about your ingested corpus.",
+    "expected_answer_contains": ["replace", "with a keyword or phrase expected in the answer"],
+    "relevant_document_titles": ["replace-with-source-doc-title"]
+  },
+  {
+    "question": "Add 10-20 of these covering easy factual lookups, multi-hop questions, and at least a few questions with NO answer in the corpus (to test guardrails).",
+    "expected_answer_contains": ["I don't have enough information"],
+    "relevant_document_titles": []
+  }
+]
