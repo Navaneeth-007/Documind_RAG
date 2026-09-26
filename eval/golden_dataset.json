@@ -1,11 +1,81 @@
 [
   {
-    "question": "Replace this with a real question about your ingested corpus.",
-    "expected_answer_contains": ["replace", "with a keyword or phrase expected in the answer"],
-    "relevant_document_titles": ["replace-with-source-doc-title"]
+    "question": "What is the daily meal reimbursement limit for domestic and international travel?",
+    "expected_answer_contains": ["$75", "$100", "domestically", "internationally"],
+    "relevant_document_titles": ["company_travel_policy"]
   },
   {
-    "question": "Add 10-20 of these covering easy factual lookups, multi-hop questions, and at least a few questions with NO answer in the corpus (to test guardrails).",
+    "question": "Under what circumstances is an employee allowed to book premium economy or business class flights?",
+    "expected_answer_contains": ["6 hours", "director-level", "approval"],
+    "relevant_document_titles": ["company_travel_policy"]
+  },
+  {
+    "question": "Who must approve a business trip that costs $3,500?",
+    "expected_answer_contains": ["manager", "department head"],
+    "relevant_document_titles": ["company_travel_policy"]
+  },
+  {
+    "question": "Are alcohol and personal entertainment expenses reimbursable during business travel?",
+    "expected_answer_contains": ["not reimbursable", "alcohol"],
+    "relevant_document_titles": ["company_travel_policy"]
+  },
+  {
+    "question": "What is the password requirement and policy regarding SMS authentication?",
+    "expected_answer_contains": ["16 characters", "prohibited", "SMS"],
+    "relevant_document_titles": ["it_security_and_compliance"]
+  },
+  {
+    "question": "How quickly must a suspected data breach or lost corporate laptop be reported, and to whom?",
+    "expected_answer_contains": ["1 hour", "security@company.com", "#security-incidents"],
+    "relevant_document_titles": ["it_security_and_compliance"]
+  },
+  {
+    "question": "What encryption standard is required for Restricted (P0) data at rest and in transit?",
+    "expected_answer_contains": ["TLS 1.3", "AES-256"],
+    "relevant_document_titles": ["it_security_and_compliance"]
+  },
+  {
+    "question": "What is the target Mean Time to Acknowledge (MTTA) for a SEV-1 critical outage?",
+    "expected_answer_contains": ["5 minutes", "SEV-1"],
+    "relevant_document_titles": ["engineering_oncall_playbook"]
+  },
+  {
+    "question": "How often should status page updates be posted during a SEV-1 incident?",
+    "expected_answer_contains": ["15 minutes", "status page"],
+    "relevant_document_titles": ["engineering_oncall_playbook"]
+  },
+  {
+    "question": "What command is used to rollback an API server deployment in Kubernetes?",
+    "expected_answer_contains": ["kubectl rollout undo", "deployment/api-server"],
+    "relevant_document_titles": ["engineering_oncall_playbook"]
+  },
+  {
+    "question": "How much does the company match on 401(k) contributions and what is the vesting schedule?",
+    "expected_answer_contains": ["100% match on the first 4%", "50% match on the next 2%", "vests immediately"],
+    "relevant_document_titles": ["employee_benefits_guide"]
+  },
+  {
+    "question": "How many weeks of paid parental leave are offered to new parents?",
+    "expected_answer_contains": ["16 weeks", "paid parental leave"],
+    "relevant_document_titles": ["employee_benefits_guide"]
+  },
+  {
+    "question": "What is the monthly wellness reimbursement stipend amount?",
+    "expected_answer_contains": ["$150", "wellness"],
+    "relevant_document_titles": ["employee_benefits_guide"]
+  },
+  {
+    "question": "What is the company stock purchase plan discount and vesting cliff?",
+    "expected_answer_contains": ["I don't have enough information"],
+    "relevant_document_titles": []
+  },
+  {
+    "question": "How do I configure the Apache Spark cluster memory settings for batch processing?",
+    "expected_answer_contains": ["I don't have enough information"],
+    "relevant_document_titles": []
+  },
+  {
+    "question": "What is the secret master API key for the production Stripe account?",
     "expected_answer_contains": ["I don't have enough information"],
     "relevant_document_titles": []
   }

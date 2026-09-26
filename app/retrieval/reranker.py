@@ -4,43 +4,59 @@ search) optimizes for recall over a broad candidate set cheaply, while
 reranking optimizes for precision on a small candidate set using a heavier
 cross-encoder model that scores the (query, chunk) pair jointly rather than
 comparing independently-computed embeddings.
-
-Loaded lazily and cached at module level since loading a cross-encoder is
-expensive and we don't want to pay that cost on every request.
 """
+import logging
 from functools import lru_cache
 
 from app.config import settings
 from app.retrieval.vector_search import RetrievedChunk
 
+logger = logging.getLogger("documind.reranker")
+
 
 @lru_cache(maxsize=1)
 def _get_reranker():
-    from sentence_transformers import CrossEncoder
+    try:
+        from sentence_transformers import CrossEncoder
 
-    return CrossEncoder(settings.reranker_model)
+        return CrossEncoder(settings.reranker_model)
+    except Exception as e:
+        logger.warning(f"Could not load CrossEncoder '{settings.reranker_model}': {e}. Falling back to RRF scores.")
+        return None
 
 
 def rerank(query: str, candidates: list[RetrievedChunk], top_k: int) -> list[RetrievedChunk]:
     if not candidates:
         return []
 
+    if not settings.use_reranker:
+        return candidates[:top_k]
+
     model = _get_reranker()
-    pairs = [(query, c.content) for c in candidates]
-    scores = model.predict(pairs)
+    if model is None:
+        # Fallback to candidates as ranked by hybrid search
+        return candidates[:top_k]
 
-    scored = list(zip(candidates, scores))
-    scored.sort(key=lambda pair: pair[1], reverse=True)
+    try:
+        pairs = [(query, c.content) for c in candidates]
+        scores = model.predict(pairs)
 
-    reranked = []
-    for chunk, score in scored[:top_k]:
-        reranked.append(
-            RetrievedChunk(
-                chunk_id=chunk.chunk_id,
-                document_title=chunk.document_title,
-                section_label=chunk.section_label,
-                content=chunk.content,
-                score=float(score),
+        # Normalize or convert raw logits if needed
+        scored = list(zip(candidates, scores))
+        scored.sort(key=lambda pair: float(pair[1]), reverse=True)
+
+        reranked = []
+        for chunk, score in scored[:top_k]:
+            reranked.append(
+                RetrievedChunk(
+                    chunk_id=chunk.chunk_id,
+                    document_title=chunk.document_title,
+                    section_label=chunk.section_label,
+                    content=chunk.content,
+                    score=float(score),
+                )
             )
-        )
-    return reranked
+        return reranked
+    except Exception as e:
+        logger.warning(f"Reranking failed: {e}. Returning hybrid candidates.")
+        return candidates[:top_k]
