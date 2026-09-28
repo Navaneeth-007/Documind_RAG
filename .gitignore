@@ -9,3 +9,4 @@ venv/
 eval/results.json
 .DS_Store
 *.log
+*.pem

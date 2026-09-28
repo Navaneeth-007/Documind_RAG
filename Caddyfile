@@ -1,0 +1,24 @@
+# DocuMind RAG Architecture — Caddy Reverse Proxy Configuration
+
+# =====================================================================
+# Option 1: Access via Domain Name (Automatic Free Let's Encrypt SSL)
+# Replace documind.yourdomain.com & api.yourdomain.com with your domain
+# =====================================================================
+# documind.yourdomain.com {
+#     reverse_proxy localhost:8501
+# }
+#
+# api.documind.yourdomain.com {
+#     reverse_proxy localhost:8000
+# }
+
+# =====================================================================
+# Option 2: Direct HTTP Access via EC2 Public IP (No domain required)
+# =====================================================================
+:80 {
+    reverse_proxy localhost:8501
+}
+
+:8000 {
+    reverse_proxy localhost:8000
+}

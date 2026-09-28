@@ -12,13 +12,13 @@ services:
           name: documind-db
           property: connectionString
       - key: LLM_PROVIDER
-        value: openai
-      - key: OPENAI_API_KEY
+        value: groq
+      - key: GROQ_API_KEY
         sync: false
       - key: EMBEDDING_PROVIDER
-        value: openai
+        value: local
       - key: EMBEDDING_MODEL
-        value: text-embedding-3-small
+        value: sentence-transformers/all-MiniLM-L6-v2
       - key: APP_ENV
         value: production
 
