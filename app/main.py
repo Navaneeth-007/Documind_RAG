@@ -43,10 +43,12 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing DocuMind RAG database schema...")
     init_database()
     try:
-        logger.info("Warming up embedding and reranker models...")
+        logger.info("Warming up embedding model...")
         embed_texts(["warmup query"])
-        from app.retrieval.hybrid import ChunkCandidate
-        rerank("warmup", [ChunkCandidate(chunk_id=1, document_id=1, document_title="t", section_label="s", content="c", score=1.0)], top_k=1)
+        if settings.use_reranker:
+            logger.info("Warming up reranker model...")
+            from app.retrieval.hybrid import ChunkCandidate
+            rerank("warmup", [ChunkCandidate(chunk_id=1, document_id=1, document_title="t", section_label="s", content="c", score=1.0)], top_k=1)
         logger.info("Model warmup complete!")
     except Exception as e:
         logger.warning("Warmup warning (non-fatal): %s", e)

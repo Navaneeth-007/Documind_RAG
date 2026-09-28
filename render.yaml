@@ -22,6 +22,8 @@ services:
         value: sentence-transformers/all-MiniLM-L6-v2
       - key: APP_ENV
         value: production
+      - key: USE_RERANKER
+        value: "false"
 
   # DocuMind Streamlit Frontend
   - type: web
