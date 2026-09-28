@@ -61,11 +61,47 @@ def ingest(source_dir: str) -> tuple[int, int]:
     return len(documents), total_chunks
 
 
+def ingest_api(source_dir: str, api_url: str) -> tuple[int, int]:
+    import requests
+
+    documents = load_documents(source_dir)
+    if not documents:
+        print(f"No supported documents found in {source_dir}.")
+        return 0, 0
+
+    total_chunks = 0
+    api_url = api_url.rstrip("/")
+    if not api_url.startswith("http://") and not api_url.startswith("https://"):
+        api_url = f"https://{api_url}"
+
+    print(f"Uploading documents to live API: {api_url} ...")
+
+    for doc in documents:
+        resp = requests.post(
+            f"{api_url}/ingest/text",
+            json={"title": doc.title, "content": doc.text, "source_path": doc.source_path},
+            timeout=60,
+        )
+        if resp.status_code == 200:
+            chunks = resp.json().get("chunks_created", 0)
+            total_chunks += chunks
+            print(f"  ✅ Ingested '{doc.title}': {chunks} chunks")
+        else:
+            print(f"  ❌ Failed '{doc.title}': {resp.text}")
+
+    return len(documents), total_chunks
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ingest documents into DocuMind.")
     parser.add_argument("--source", required=True, help="Directory of .txt/.md files to ingest")
+    parser.add_argument("--api-url", default=None, help="Remote API URL (e.g. https://documind-api-xxxx.onrender.com)")
     args = parser.parse_args()
 
-    print(f"Ingesting documents from {args.source} ...")
-    n_docs, n_chunks = ingest(args.source)
+    if args.api_url:
+        n_docs, n_chunks = ingest_api(args.source, args.api_url)
+    else:
+        print(f"Ingesting documents from {args.source} ...")
+        n_docs, n_chunks = ingest(args.source)
+
     print(f"Done. {n_docs} documents, {n_chunks} chunks ingested.")
