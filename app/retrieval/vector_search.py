@@ -24,15 +24,15 @@ def dense_search(query_embedding: list[float], top_k: int) -> list[RetrievedChun
     sql = text(
         """
         SELECT c.id, d.title, c.section_label, c.content,
-               1 - (c.embedding <=> (:embedding)::vector) AS score
+               1 - (c.embedding <=> CAST(:embedding AS vector)) AS score
         FROM chunks c
         JOIN documents d ON d.id = c.document_id
-        ORDER BY c.embedding <=> (:embedding)::vector
+        ORDER BY c.embedding <=> CAST(:embedding AS vector)
         LIMIT :top_k
         """
     )
     with get_connection() as conn:
-        rows = conn.execute(sql, {"embedding": query_embedding, "top_k": top_k}).fetchall()
+        rows = conn.execute(sql, {"embedding": str(query_embedding), "top_k": top_k}).fetchall()
 
     return [
         RetrievedChunk(

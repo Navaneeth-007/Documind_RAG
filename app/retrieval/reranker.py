@@ -6,6 +6,7 @@ cross-encoder model that scores the (query, chunk) pair jointly rather than
 comparing independently-computed embeddings.
 """
 import logging
+import math
 from functools import lru_cache
 
 from app.config import settings
@@ -25,6 +26,15 @@ def _get_reranker():
         return None
 
 
+def _sigmoid(x: float) -> float:
+    """Map raw logits to [0.0, 1.0] confidence score."""
+    if x < -40.0:
+        return 0.0
+    elif x > 40.0:
+        return 1.0
+    return 1.0 / (1.0 + math.exp(-x))
+
+
 def rerank(query: str, candidates: list[RetrievedChunk], top_k: int) -> list[RetrievedChunk]:
     if not candidates:
         return []
@@ -39,11 +49,10 @@ def rerank(query: str, candidates: list[RetrievedChunk], top_k: int) -> list[Ret
 
     try:
         pairs = [(query, c.content) for c in candidates]
-        scores = model.predict(pairs)
+        raw_scores = model.predict(pairs)
 
-        # Normalize or convert raw logits if needed
-        scored = list(zip(candidates, scores))
-        scored.sort(key=lambda pair: float(pair[1]), reverse=True)
+        scored = [(chunk, _sigmoid(float(score))) for chunk, score in zip(candidates, raw_scores)]
+        scored.sort(key=lambda pair: pair[1], reverse=True)
 
         reranked = []
         for chunk, score in scored[:top_k]:

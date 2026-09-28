@@ -6,8 +6,6 @@ venv/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
-data/sample_docs/*
-!data/sample_docs/.gitkeep
 eval/results.json
 .DS_Store
 *.log

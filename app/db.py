@@ -90,8 +90,7 @@ def init_database() -> None:
                 text(
                     """
                     CREATE INDEX IF NOT EXISTS chunks_embedding_idx
-                        ON chunks USING ivfflat (embedding vector_cosine_ops)
-                        WITH (lists = 100);
+                        ON chunks USING hnsw (embedding vector_cosine_ops);
                     """
                 )
             )
