@@ -33,7 +33,7 @@ services:
         fromService:
           type: web
           name: documind-api
-          property: host
+          property: url
 
 databases:
   - name: documind-db
