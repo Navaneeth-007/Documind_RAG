@@ -227,7 +227,7 @@ with tab_chat:
                         )
 
                     else:
-                        resp = requests.post(f"{API_URL}/query", json=payload, timeout=60)
+                        resp = requests.post(f"{API_URL}/query", json=payload, timeout=180)
                         resp.raise_for_status()
                         data = resp.json()
 
