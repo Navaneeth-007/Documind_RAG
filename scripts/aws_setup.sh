@@ -6,9 +6,17 @@ echo "===================================================================="
 echo "🚀 Starting DocuMind RAG Setup on AWS EC2 Ubuntu Server..."
 echo "===================================================================="
 
-# 1. Update OS packages
+# 1. Update OS packages & ensure swap memory for builds
 sudo apt-get update -y
 sudo apt-get install -y curl git apt-transport-https ca-certificates software-properties-common
+
+if [ $(free -m | awk '/^Mem:/{print $2}') -lt 3000 ] && [ ! -f /swapfile ]; then
+    echo "🧠 Allocating 2GB swap space for low-memory EC2 instance..."
+    sudo fallocate -l 2G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=2048
+    sudo chmod 600 /swapfile
+    sudo mkswap /swapfile
+    sudo swapon /swapfile
+fi
 
 # 2. Install Docker if not present
 if ! command -v docker &> /dev/null; then
