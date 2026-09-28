@@ -22,7 +22,83 @@ This guide covers options for deploying DocuMind into production or staging envi
 
 ---
 
-## Option 1: Render.com (Easiest Cloud Setup — 1 Click Blueprint)
+## Option 1: AWS EC2 Instance (Recommended for Portfolio & Production Showcase)
+
+Deploying on **AWS EC2** with **Docker Compose** and **Caddy Reverse Proxy** demonstrates full-stack DevOps engineering, cloud security, and container orchestration skills.
+
+### Step 1: Launch an AWS EC2 Instance
+1. Go to **AWS Management Console** → **EC2** → **Launch Instance**.
+2. **Name**: `documind-rag-server`
+3. **AMI**: `Ubuntu Server 24.04 LTS` (64-bit x86)
+4. **Instance Type**: `t3.small` (2 vCPU, 2GB RAM) or `t2.micro` (Free Tier)
+5. **Key Pair**: Select or create a `.pem` SSH key.
+6. **Network / Security Group**:
+   - Allow **SSH** (`22`) from your IP.
+   - Allow **HTTP** (`80`) from Anywhere (`0.0.0.0/0`).
+   - Allow **HTTPS** (`443`) from Anywhere (`0.0.0.0/0`).
+   - Allow **Custom TCP** (`8000`) from Anywhere (`0.0.0.0/0`).
+7. Click **Launch Instance**.
+
+---
+
+### Step 2: SSH into EC2 & Clone Repository
+```bash
+ssh -i /path/to/your-key.pem ubuntu@<EC2-PUBLIC-IP>
+
+# Clone repository
+git clone https://github.com/your-username/Documind-RAG.git
+cd Documind-RAG
+```
+
+---
+
+### Step 3: Configure Environment Variables
+Create your production `.env` file on EC2:
+```bash
+nano .env
+```
+Paste your production settings:
+```env
+POSTGRES_USER=documind
+POSTGRES_PASSWORD=documind_secure_pass_2026
+POSTGRES_DB=documind
+DATABASE_URL=postgresql://documind:documind_secure_pass_2026@db:5432/documind
+
+LLM_PROVIDER=groq
+GROQ_API_KEY=your_groq_api_key_here
+LLM_MODEL=openai/gpt-oss-120b
+
+EMBEDDING_PROVIDER=local
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+RERANKER_MODEL=cross-encoder/ms-marco-MiniLM-L-6-v2
+```
+
+---
+
+### Step 4: Run Automated AWS One-Touch Setup Script
+Execute the provided automated deployment script:
+```bash
+chmod +x scripts/aws_setup.sh
+./scripts/aws_setup.sh
+```
+
+This script will automatically:
+1. Install Docker Engine & Docker Compose Plugin.
+2. Build and launch PostgreSQL + `pgvector`, FastAPI, and Streamlit containers.
+3. Wait for database health checks and initialize vector tables with HNSW indexing.
+4. Ingest sample documents into the knowledge base.
+5. Start Caddy reverse proxy on port 80/443.
+
+---
+
+### Step 5: Access your AWS Deployment
+- 🌐 **Streamlit UI**: `http://<EC2-PUBLIC-IP>`
+- 🔌 **API Documentation**: `http://<EC2-PUBLIC-IP>:8000/docs`
+- 📊 **Health Metrics**: `http://<EC2-PUBLIC-IP>:8000/health`
+
+---
+
+## Option 2: Render.com (Easiest 1-Click Blueprint)
 
 DocuMind includes a `render.yaml` infrastructure-as-code specification.
 
