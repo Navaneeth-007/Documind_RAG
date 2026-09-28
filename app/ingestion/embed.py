@@ -13,6 +13,7 @@ logger = logging.getLogger("documind.embed")
 
 _openai_client: Any | None = None
 _st_model: Any | None = None
+_fastembed_model: Any | None = None
 
 
 def _get_openai_client():
@@ -25,6 +26,21 @@ def _get_openai_client():
             kwargs["base_url"] = settings.openai_base_url
         _openai_client = OpenAI(**kwargs)
     return _openai_client
+
+
+def _get_fastembed_model():
+    global _fastembed_model
+    if _fastembed_model is None:
+        try:
+            from fastembed import TextEmbedding
+
+            model_name = settings.embedding_model or "sentence-transformers/all-MiniLM-L6-v2"
+            logger.info("Loading FastEmbed (ONNX engine) for '%s' (35MB RAM footprint)...", model_name)
+            _fastembed_model = TextEmbedding(model_name=model_name)
+        except Exception as e:
+            logger.info("FastEmbed unavailable, falling back to SentenceTransformers: %s", e)
+            _fastembed_model = False
+    return _fastembed_model if _fastembed_model is not False else None
 
 
 def _get_st_model():
@@ -54,7 +70,7 @@ def _mock_embed(texts: list[str], dim: int) -> list[list[float]]:
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    """Embed a batch of texts. Handles OpenAI, SentenceTransformers, and Mock providers."""
+    """Embed a batch of texts. Handles OpenAI, FastEmbed ONNX, SentenceTransformers, and Mock providers."""
     if not texts:
         return []
 
@@ -65,7 +81,12 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
         response = client.embeddings.create(model=settings.embedding_model, input=texts)
         return [item.embedding for item in response.data]
 
-    elif provider in {"sentence-transformers", "local", "hf"}:
+    elif provider in {"sentence-transformers", "local", "hf", "fastembed"}:
+        fe_model = _get_fastembed_model()
+        if fe_model is not None:
+            embeddings = list(fe_model.embed(texts))
+            return [emb.tolist() for emb in embeddings]
+
         model = _get_st_model()
         embeddings = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
         return [emb.tolist() for emb in embeddings]
