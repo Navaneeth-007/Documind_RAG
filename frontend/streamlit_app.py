@@ -19,6 +19,8 @@ import streamlit as st
 
 API_URL = os.environ.get("API_URL", "http://localhost:8000").rstrip("/")
 if not API_URL.startswith("http://") and not API_URL.startswith("https://"):
+    if "." not in API_URL and ":" not in API_URL:
+        API_URL = f"{API_URL}.onrender.com"
     API_URL = f"https://{API_URL}"
 
 st.set_page_config(
