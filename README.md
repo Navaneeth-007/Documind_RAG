@@ -1,180 +1,168 @@
-# DocuMind — Production-Grade RAG System
+# DocuMind RAG
 
-A high-performance retrieval-augmented generation (RAG) system for querying enterprise document corpuses with hybrid retrieval (dense embeddings + BM25 keyword search), cross-encoder reranking, source citations, strict input/confidence guardrails, LLMOps telemetry, and an automated evaluation benchmark harness.
+DocuMind is a production-minded retrieval-augmented generation system for asking trustworthy questions over enterprise documents. It combines dense vector search, PostgreSQL full-text search, cross-encoder reranking, grounded citations, input guardrails, streaming responses, and LLMOps telemetry in one demonstrable application.
 
----
+## What It Demonstrates
 
-## 🌟 Key Features
+- **Hybrid retrieval:** Dense `pgvector` search and PostgreSQL `tsvector` keyword search fused with Reciprocal Rank Fusion.
+- **Reranked context:** Candidate chunks are scored by a cross-encoder before they reach the LLM.
+- **Grounded answers:** Responses include source documents, section labels, snippets, and relevance scores.
+- **Defensive RAG:** Prompt-injection detection and confidence thresholds produce an honest fallback when evidence is weak.
+- **Flexible ingestion:** Upload or ingest `.md`, `.txt`, `.pdf`, `.json`, and `.csv` documents through the UI, API, or CLI.
+- **Provider flexibility:** OpenAI, Anthropic, Groq, AWS Bedrock, and local Hugging Face models can be configured through environment variables.
+- **Operational visibility:** Query latency, token usage, estimated cost, and evaluation results are exposed through the Streamlit dashboard.
+- **Evaluation-first workflow:** The included golden dataset measures retrieval precision, answer relevance, and faithfulness.
 
-- **Hybrid Retrieval (Dense + BM25)**: Dense vector similarity search (`pgvector`) fused with full-text keyword search (`tsvector`) via Reciprocal Rank Fusion (RRF). Exact terms, IDs, and section codes are never lost in embedding space.
-- **Cross-Encoder Reranking**: Re-scores fused candidate sets using `bge-reranker-base` (or `ms-marco-MiniLM`) to maximize top-k precision before prompting the LLM.
-- **Strict Guardrails & Groundedness**: Rejects prompt injections and out-of-domain queries when retrieval confidence falls below thresholds, returning honest fallback responses rather than hallucinations.
-- **Full Traceability & Citations**: Every answer includes grounded source snippets, document titles, section headers, and similarity confidence scores.
-- **Multi-Format Ingestion**: Supports `.md`, `.txt`, `.pdf`, `.json`, and `.csv` through CLI, REST API endpoints, or drag-and-drop web UI.
-- **Multi-Provider LLM & Embedding Support**: Swappable configurations for OpenAI (`gpt-4o-mini`, `text-embedding-3-small`), Anthropic (`claude-3-5-sonnet`), Groq (`llama-3.3-70b`), AWS Bedrock, or local Hugging Face models (`sentence-transformers`).
-- **Real-Time Streaming**: Server-Sent Events (SSE) `/query/stream` endpoint for ultra-low time-to-first-token UI streaming.
-- **LLMOps Observability & Telemetry**: Every query automatically logs token breakdown (prompt/completion), latency (ms), and cost in USD to PostgreSQL with built-in analytics dashboards.
-- **Golden Evaluation Harness**: Automated test suite modeled on RAGAS measuring Faithfulness, Answer Relevance, and Retrieval Precision@5 across a benchmark set.
-- **Production Ready & Deployable**: 1-click Render Blueprint (`render.yaml`), Fly.io (`fly.toml`), and Docker Compose configurations included.
+## Product Screenshots
 
----
+### Grounded Chat
 
-## 🏗️ Architecture
+![DocuMind query interface](Screenshots/query.png)
 
+### Knowledge Base Management
+
+![DocuMind knowledge base interface](Screenshots/kb.png)
+
+### Evaluation Dashboard
+
+![DocuMind evaluation dashboard](Screenshots/evaluation.png)
+
+### LLMOps Telemetry
+
+![DocuMind LLMOps dashboard](Screenshots/LLMOps.png)
+
+## Architecture
+
+```mermaid
+flowchart LR
+    User[User] --> UI[Streamlit UI<br/>Chat, KB, Eval, LLMOps]
+    UI -->|REST / SSE| API[FastAPI API]
+    API --> Guard[Guardrails<br/>Injection + confidence]
+    Guard --> Retrieve[Hybrid retrieval]
+    Retrieve --> Dense[Dense search<br/>pgvector]
+    Retrieve --> Keyword[Keyword search<br/>tsvector]
+    Dense --> Fuse[RRF fusion]
+    Keyword --> Fuse
+    Fuse --> Rerank[Cross-encoder reranker]
+    Rerank --> DB[(PostgreSQL + pgvector)]
+    Rerank --> Generate[LLM generation<br/>Citations + streaming]
+    Generate --> API
+    API --> Telemetry[Telemetry<br/>Latency, tokens, cost]
+    Telemetry --> DB
+    Ingest[CLI / upload<br/>md, txt, pdf, json, csv] --> Chunk[Chunk + embed]
+    Chunk --> DB
 ```
-                                  ┌──────────────────────────────┐
-                                  │   Streamlit Web Interface    │
-                                  │ (Chat, Docs, LLMOps, Eval)   │
-                                  └──────────────┬───────────────┘
-                                                 │ HTTP (REST / SSE)
-                                  ┌──────────────▼───────────────┐
-                                  │       FastAPI API App        │
-                                  │        (app/main.py)         │
-                                  └──────────────┬───────────────┘
-                                                 │
-                   ┌─────────────────────────────┼─────────────────────────────┐
-                   ▼                             ▼                             ▼
-            ┌──────────────┐              ┌──────────────┐              ┌──────────────┐
-            │  Guardrails  │              │  Retrieval   │              │  Generation  │
-            │  • Injection │              │  • Dense     │              │  • System    │
-            │  • Confidence│              │  • Keyword   │              │  • Streaming │
-            │  • Sanitizer │              │  • RRF + CE  │              │  • Provider  │
-            └──────────────┘              └──────┬───────┘              └──────┬───────┘
-                                                 │                             │
-                                          ┌──────▼──────┐                      │
-                                          │ PostgreSQL  │                      │
-                                          │ + pgvector  │                      │
-                                          └─────────────┘                      │
-                                                 │                             ▼
-                                                 └───────────────▶ Response + Citations
-                                                                   + Telemetry & Cost
-```
 
----
+## Evaluation Snapshot
 
-## 📊 Benchmark & Evaluation Results
+The benchmark runner (`eval/run_eval.py`) evaluates the golden dataset in `eval/golden_dataset.json`.
 
-DocuMind includes an automated evaluation harness (`eval/run_eval.py`) running against a golden benchmark dataset (`eval/golden_dataset.json`):
+| Metric | Score | Meaning |
+|---|---:|---|
+| Retrieval Precision@5 | 0.950 | Relevant documents in the retrieved top five |
+| Answer Relevance | 0.940 | Coverage of expected facts in generated answers |
+| Faithfulness | 0.980 | Consistency with retrieved evidence |
+| Average latency | < 450 ms | End-to-end query latency target |
+| Cost per query | ~ $0.00015 | Example OpenAI plus reranker configuration |
 
-| Metric | Target / Score | Description |
-|---|---|---|
-| **Retrieval Precision@5** | **0.950** | Fraction of retrieved chunks coming from ground-truth relevant documents |
-| **Answer Relevance** | **0.940** | Semantic & lexical coverage of expected key facts in generated answers |
-| **Faithfulness** | **0.980** | Factual consistency score measuring absence of ungrounded hallucinations |
-| **Average Latency** | **< 450 ms** | End-to-end hybrid retrieval, reranking, and generation pipeline |
-| **Cost per Query** | **~$0.00015** | Average cost using `gpt-4o-mini` / `bge-reranker-base` |
+## Quickstart
 
----
+### Prerequisites
 
-## 🚀 Quickstart Guide
+- Docker and Docker Compose
+- Python 3.11+ for local development
+- An API key for OpenAI, Anthropic, Groq, or another configured provider
 
-### 1. Prerequisites
-- [Docker](https://www.docker.com/) & Docker Compose
-- Python 3.11+
-- OpenAI, Anthropic, or Groq API key
+### Run the full stack
 
-### 2. Environment Configuration
 ```bash
-# Open .env and add your API keys / configuration
-nano .env
-```
-
-### 3. Run Entire Stack with Docker Compose
-```bash
+# Create .env and add your provider credentials
+$EDITOR .env
 docker compose up --build
 ```
-- **FastAPI Backend:** [http://localhost:8000](http://localhost:8000) (Interactive Swagger docs at `/docs`)
-- **Streamlit Web UI:** [http://localhost:8501](http://localhost:8501)
 
-### 4. Local Development (Without Docker)
+- Streamlit UI: [http://localhost:8501](http://localhost:8501)
+- FastAPI API: [http://localhost:8000](http://localhost:8000)
+- Swagger docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### Run locally with Docker PostgreSQL
+
 ```bash
-# 1. Start Postgres + pgvector
 docker compose up -d db
-
-# 2. Setup Virtual Environment
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-
-# 3. Ingest Sample Enterprise Knowledge Base
 python scripts/ingest_documents.py --source ./data/sample_docs
-
-# 4. Start FastAPI API
 uvicorn app.main:app --reload --port 8000
-
-# 5. Start Streamlit Frontend (in another terminal)
 streamlit run frontend/streamlit_app.py
 ```
 
-### 5. Running Tests & Linting
+### Test and evaluate
+
 ```bash
 pytest tests/ -v
 ruff check app tests eval scripts frontend
-```
-
-### 6. Running the Evaluation Harness
-```bash
 python eval/run_eval.py
 ```
 
----
+## Deployment
 
-## 🌐 Production Cloud Hosting
+### Render
 
-DocuMind is pre-configured for instant zero-hassle cloud deployment:
+The included `render.yaml` provisions a managed PostgreSQL database, FastAPI service, and Streamlit service.
 
-- **Render (1-Click Blueprint):** Push to GitHub, open [Render](https://render.com), and click **New Blueprint Instance** connecting to `render.yaml`. It automatically provisions Postgres, pgvector, FastAPI, and Streamlit.
-- **Railway:** Deploy directly from GitHub using the included `Dockerfile` and PostgreSQL service template.
-- **Fly.io:** Run `fly launch` using `fly.toml`.
-- **Self-Hosted VPS:** Full Docker Compose setup with reverse proxy support.
+1. Push the repository to GitHub.
+2. In [Render](https://render.com), choose **New > Blueprint Instance** and select this repository.
+3. Add the required provider secret, such as `GROQ_API_KEY`, in the Render dashboard.
+4. Deploy. Render uses `/health` for the API health check and supplies the frontend with the API URL.
 
-For comprehensive deployment walkthroughs, see [DEPLOYMENT.md](DEPLOYMENT.md).
+### Docker host or VPS
 
----
+On any Docker-capable host, configure `.env` and run:
 
-## 📁 Project Structure
-
+```bash
+docker compose up -d --build
+docker compose run --rm api python scripts/ingest_documents.py --source ./data/sample_docs
 ```
+
+For a public deployment, place a reverse proxy such as Caddy in front of ports `8501` and `8000`, and expose only HTTPS. Never commit `.env` or provider keys.
+
+## API Surface
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /health` | API and database health |
+| `POST /query` | Grounded JSON answer with citations |
+| `POST /query/stream` | Token streaming over Server-Sent Events |
+| `POST /upload` | Ingest a supported document file |
+| `POST /ingest/text` | Ingest raw text with a title |
+| `GET /documents` | List ingested documents and chunk counts |
+| `GET /analytics` | Query latency, token, and cost analytics |
+
+## Project Structure
+
+```text
 Documind-RAG/
 ├── app/
-│   ├── main.py                 # FastAPI REST API & SSE streaming endpoints
-│   ├── config.py               # Pydantic Settings & environment validation
-│   ├── models.py               # Request/response schemas & data models
-│   ├── db.py                   # PostgreSQL connection & auto-schema init
-│   ├── guardrails.py           # Injection detection & confidence thresholds
-│   ├── ingestion/              # Document loaders, chunker, & embeddings
-│   │   ├── loader.py           # Support for .md, .txt, .pdf, .json, .csv
-│   │   ├── chunker.py          # Recursive header-aware semantic chunking
-│   │   └── embed.py            # OpenAI & SentenceTransformers embedding engine
-│   ├── retrieval/              # Hybrid retrieval & reranking subsystem
-│   │   ├── vector_search.py    # Dense pgvector cosine similarity search
-│   │   ├── keyword_search.py   # PostgreSQL full-text search (tsvector)
-│   │   ├── hybrid.py           # Reciprocal Rank Fusion (RRF)
-│   │   └── reranker.py         # Cross-encoder reranker (BAAI/bge-reranker)
-│   └── generation/             # Prompting & LLM orchestration
-│       ├── prompts.py          # Grounded citation prompt templates
-│       └── llm.py              # Multi-provider client (OpenAI, Anthropic, Bedrock, Groq)
-├── frontend/
-│   └── streamlit_app.py        # Chat UI, Knowledge Base manager, LLMOps, & Eval
-├── eval/
-│   ├── golden_dataset.json     # 16+ benchmark test cases & ground truths
-│   ├── metrics.py              # Precision@k, Faithfulness, Relevance algorithms
-│   └── run_eval.py             # Evaluation runner CLI & reporter
-├── data/sample_docs/           # Production sample corpus (Security, On-call, HR)
-├── scripts/
-│   ├── ingest_documents.py     # CLI document ingestion entrypoint
-│   └── init_db.sql             # SQL schema with vector & tsvector indices
-├── tests/                      # Pytest unit & integration test suite
-├── .github/workflows/ci.yml    # GitHub Actions automated lint & test pipeline
-├── docker-compose.yml          # Multi-container orchestration (DB, API, UI)
-├── Dockerfile                  # Container build specification
-├── render.yaml                 # 1-click Render cloud deployment blueprint
-├── DEPLOYMENT.md               # Cloud hosting & production manual
-├── requirements.txt            # Locked Python dependencies
+│   ├── main.py                 # FastAPI REST and SSE endpoints
+│   ├── config.py               # Environment-backed settings
+│   ├── db.py                   # PostgreSQL connection and schema setup
+│   ├── guardrails.py           # Injection and confidence checks
+│   ├── ingestion/              # Loaders, chunking, and embeddings
+│   ├── retrieval/              # Vector, keyword, fusion, and reranking
+│   └── generation/             # Prompts and multi-provider LLM clients
+├── frontend/streamlit_app.py  # Chat, KB, evaluation, and LLMOps UI
+├── eval/                       # Golden dataset, metrics, and runner
+├── data/sample_docs/           # Example enterprise knowledge base
+├── scripts/                    # Ingestion CLI and database schema
+├── tests/                      # Automated test suite
+├── docker-compose.yml          # Local multi-service stack
+├── render.yaml                 # Render deployment blueprint
+├── requirements.txt            # Python dependencies
+├── LICENSE                     # MIT license
 └── README.md                   # Project documentation
 ```
 
----
+## License
 
-## 📄 License
-MIT
+[MIT License](LICENSE)
